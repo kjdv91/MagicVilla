@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;
 using Village_API.Datos;
 using Village_API.Models;
@@ -13,9 +14,11 @@ namespace Village_API.Controllers
     public class VillaController : ControllerBase
     {
         private readonly ILogger<VillaController> _logger;
-        public VillaController(ILogger<VillaController> logger)
+        private readonly ApplicationDbContext _db;
+        public VillaController(ILogger<VillaController> logger,ApplicationDbContext db)
         {
             _logger = logger; //servicio
+            _db = db;
 
             
         }
@@ -24,7 +27,7 @@ namespace Village_API.Controllers
         public ActionResult< IEnumerable<VillageDto>> GetVillas()
         {
             _logger.LogInformation("Obteniendo Villas");  //servicio
-            return Ok(VillageStore.villaList);  //retorna un status code
+            return Ok(_db.Villas.ToList());  //retorna un status code
 
         }
         [HttpGet("id:int", Name ="GetVilla")]
@@ -41,7 +44,7 @@ namespace Village_API.Controllers
                 return BadRequest();  //status code no existe id
 
             }
-            var villa = VillageStore.villaList.FirstOrDefault(y => y.Id == id);
+            var villa = _db.Villas.FirstOrDefault(y => y.Id == id);
             return Ok(villa);
 
         }
@@ -57,7 +60,7 @@ namespace Village_API.Controllers
                 return BadRequest(ModelState);
             }
             //validacion personalizada nombre repetido
-            if(VillageStore.villaList.FirstOrDefault(x=>x.Name.ToLower() == villaDto.Name.ToLower()) != null){
+            if(_db.Villas.FirstOrDefault(x=>x.Name.ToLower() == villaDto.Name.ToLower()) != null){
                 ModelState.AddModelError("ExitsName", "La villa con este nombre ya existe");
                 return BadRequest(ModelState);
 
@@ -70,8 +73,21 @@ namespace Village_API.Controllers
             {
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
-            villaDto.Id = VillageStore.villaList.OrderByDescending(v => v.Id).FirstOrDefault().Id + 1;
-            VillageStore.villaList.Add(villaDto);
+            Villa modeloDto = new()
+            {
+                
+                Name = villaDto.Name,
+                Details = villaDto.Details,
+                Capacity = villaDto.Capacity,
+                ImageUrl = villaDto.ImageUrl,
+                SquareMetters = villaDto.SquareMetters,
+                UpdateDate = villaDto.UpdateDate,
+
+
+
+            };
+            _db.Villas.Add(modeloDto);
+            _db.SaveChanges();
             return CreatedAtRoute("GetVilla", new { Id = villaDto.Id });
         }
 
@@ -91,12 +107,13 @@ namespace Village_API.Controllers
             {
                 return BadRequest();
             }
-            var villa = VillageStore.villaList.FirstOrDefault(z => z.Id == id);
+            var villa = _db.Villas.FirstOrDefault(z => z.Id == id);
             if(villa == null)
             {
                 return NotFound();
             }
-            VillageStore.villaList.Remove(villa);
+            _db.Villas.Remove(villa);
+            _db.SaveChanges();
             return NoContent();
         }
         [HttpPut("{id:int}")]
@@ -109,11 +126,27 @@ namespace Village_API.Controllers
             {
                 return BadRequest();
             }
-            var villa = VillageStore.villaList.FirstOrDefault(x => x.Id == id);
-            villa.Name = villageDto.Name;
-            villa.SqauerMeter = villageDto.SqauerMeter;
-            villa.Capacity = villageDto.Capacity;
+            //var villa = VillageStore.villaList.FirstOrDefault(x => x.Id == id);
+            //villa.Name = villageDto.Name;
+            //villa.SquareMetters = villageDto.SquareMetters;
+            //villa.Capacity = villageDto.Capacity;
 
+            Villa modeloDto = new()
+            {
+                Id = villageDto.Id,
+                Name = villageDto.Name,
+                Details = villageDto.Details,
+                ImageUrl = villageDto.ImageUrl,
+                SquareMetters = villageDto.SquareMetters,
+                UpdateDate = villageDto.UpdateDate,
+                Capacity = villageDto.Capacity
+
+
+
+
+            };
+            _db.Villas.Update(modeloDto);
+            _db.SaveChanges();
             return NoContent();
 
 
@@ -129,13 +162,41 @@ namespace Village_API.Controllers
             {
                 return BadRequest();
             }
-            var villa = VillageStore.villaList.FirstOrDefault(x => x.Id == id);
-            patchDto.ApplyTo(villa, ModelState);
+            var villa = _db.Villas.AsNoTracking().FirstOrDefault(x => x.Id == id);
+            VillageDto villageDto = new()
+            {
+                Id = villa.Id,
+                Capacity = villa.Capacity,
+                Details = villa.Details,
+                SquareMetters = villa.SquareMetters,
+                Name = villa.Name,
+                ImageUrl= villa.ImageUrl
+            };
+            
+            if (villa == null)return BadRequest();
+
+            
+            patchDto.ApplyTo(villageDto, ModelState);
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
 
             }
+
+            Villa modelo = new()
+            {
+                Id = villa.Id,
+                Name = villa.Name,
+                Details = villa.Details,
+                ImageUrl = villa.ImageUrl,
+                SquareMetters = villa.SquareMetters,
+                UpdateDate = villa.UpdateDate,
+                Capacity = villa.Capacity,
+                Fee = villa.Fee
+
+            };
+            _db.Villas.Update(modelo);
+            _db.SaveChanges();
             return NoContent();
 
 
