@@ -12,6 +12,10 @@ namespace Village_API
             CreateMap<VillageDto, Villa>();
             CreateMap<Villa, VillageCreateDto>().ReverseMap();
             CreateMap<Villa, VillageUpdateDto>().ReverseMap();
+            CreateMap<VillageNumber, VillageNumberDto>().ReverseMap();
+            CreateMap<VillageNumber, VillageNumberCreateDto>().ReverseMap();
+            CreateMap<VillageNumber, VillageNumberUpdateDto>().ReverseMap();
+
         }
     }
 }
